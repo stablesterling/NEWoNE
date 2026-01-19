@@ -1,4 +1,6 @@
 fastapi
 uvicorn
 ytmusicapi
-gunicorn
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
