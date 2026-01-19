@@ -39,9 +39,12 @@
         .auth-btn { width: 100%; padding: 16px; background: var(--gold); border: none; font-weight: 600; cursor: pointer; color: #000; letter-spacing: 2px; text-transform: uppercase; border-radius: 4px; }
 
         /* NAV */
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 25px 40px; position: sticky; top: 0; z-index: 100; }
-        .nav-links span { font-size: 11px; letter-spacing: 2px; cursor: pointer; color: var(--muted); margin-left: 20px; text-transform: uppercase; transition: 0.3s; }
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 25px 40px; position: sticky; top: 0; z-index: 100; background: rgba(13,13,13,0.8); backdrop-filter: blur(10px); }
+        .nav-links { display: flex; align-items: center; }
+        .nav-links span { font-size: 11px; letter-spacing: 2px; cursor: pointer; color: var(--muted); margin-left: 25px; text-transform: uppercase; transition: 0.3s; }
         .nav-links span.active, .nav-links span:hover { color: var(--gold); }
+        .logout-link { border: 1px solid rgba(197, 163, 103, 0.2); padding: 5px 12px; border-radius: 4px; }
+        .logout-link:hover { background: rgba(197, 163, 103, 0.1); }
 
         /* CONTENT */
         .hero { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; }
@@ -58,7 +61,7 @@
         /* FLOATING MUSIC CONTROLLER */
         .player { 
             position: fixed; 
-            bottom: 30px; /* Moved up from bottom */
+            bottom: 30px; 
             left: 50%;
             transform: translateX(-50%);
             width: 90%; 
@@ -70,7 +73,7 @@
             align-items: center; 
             gap: 20px; 
             border: 1px solid rgba(255,255,255,0.1); 
-            border-radius: 20px; /* Rounded corners for floating look */
+            border-radius: 20px; 
             z-index: 1000;
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
         }
@@ -93,7 +96,7 @@
 
         /* FOOTER */
         footer {
-            padding: 40px 20px 140px 20px; /* Extra bottom padding for player */
+            padding: 40px 20px 140px 20px; 
             text-align: center;
             font-size: 10px;
             letter-spacing: 2px;
@@ -126,7 +129,8 @@
         <div style="font-family: var(--serif); color:var(--gold); font-size: 22px; letter-spacing: 4px;">VOFO</div>
         <div class="nav-links">
             <span id="navExplore" class="active" onclick="switchTab('explore')">Frequency</span>
-            <span id="navLibrary" onclick="switchTab('library')">Curation</span>
+            <span id="navLibrary" onclick="switchTab('library')">Liked Songs</span>
+            <span id="navLogout" class="logout-link" onclick="handleLogout()">Logout</span>
         </div>
     </nav>
 
@@ -140,7 +144,7 @@
     </div>
 
     <div id="libraryTab" class="hero hidden">
-        <div class="vofo-logo">Curation</div>
+        <div class="vofo-logo">Liked Songs</div>
         <div id="libraryResults" class="container"></div>
     </div>
 
@@ -193,20 +197,41 @@
     async function handleAuth() {
         const u = document.getElementById('lUser').value;
         const p = document.getElementById('lPass').value;
+        
+        // Mocking API for demo purposes if backend isn't connected
+        // Replace with your real fetch calls
         const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username: u, password: p})
         });
         const data = await res.json();
+        
         if(data.success) {
             if(isLoginMode) {
                 currentUser = data;
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 fetchTrending();
-            } else { alert("Registry successful."); toggleAuth(); }
-        } else { alert("Access Denied"); }
+            } else { 
+                alert("Registry successful."); 
+                toggleAuth(); 
+            }
+        } else { 
+            alert("Access Denied"); 
+        }
+    }
+
+    function handleLogout() {
+        currentUser = null;
+        if(player && player.stopVideo) player.stopVideo();
+        
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('playerBar').classList.add('hidden');
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('lUser').value = '';
+        document.getElementById('lPass').value = '';
+        document.getElementById('bg-blur').style.backgroundImage = 'none';
     }
 
     function onYouTubeIframeAPIReady() {
@@ -271,7 +296,8 @@
     }
 
     function togglePlay() {
-        if(player.getPlayerState() === 1) player.pauseVideo();
+        const state = player.getPlayerState();
+        if(state === 1) player.pauseVideo();
         else player.playVideo();
     }
 
@@ -319,6 +345,7 @@
     }
 
     async function checkIfLiked(id) {
+        if(!currentUser) return;
         const res = await fetch(`/api/liked/${currentUser.user_id}`);
         const data = await res.json();
         const isLiked = data.some(s => s.id === id);
