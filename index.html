@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Search App</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f1f1f1; }
+        header { background: #fff; padding: 15px; display: flex; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .search-box { display: flex; width: 100%; max-width: 600px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px 0 0 20px; outline: none; }
+        button { padding: 10px 20px; border: 1px solid #ccc; border-left: none; border-radius: 0 20px 20px 0; cursor: pointer; background: #f8f8f8; }
+        
+        .container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #video-viewport { width: 100%; max-width: 800px; margin-bottom: 30px; display: none; }
+        .iframe-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; background: #000; }
+        .iframe-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+        
+        #results-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+            gap: 20px; width: 100%; max-width: 1200px; 
+        }
+        .card { background: white; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+        .card:hover { transform: scale(1.03); }
+        .card img { width: 100%; display: block; }
+        .card-info { padding: 10px; }
+        .card-title { font-size: 14px; font-weight: bold; color: #0f0f0f; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="search-box">
+        <input type="text" id="query" placeholder="Search YouTube...">
+        <button onclick="search()">🔍</button>
+    </div>
+</header>
+
+<div class="container">
+    <div id="video-viewport">
+        <div class="iframe-container" id="player-inner"></div>
+        <h3 id="playing-title"></h3>
+    </div>
+
+    <div id="results-grid"></div>
+</div>
+
+<script>
+    async function search() {
+        const q = document.getElementById('query').value;
+        if (!q) return;
+        
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        
+        const grid = document.getElementById('results-grid');
+        grid.innerHTML = '';
+
+        data.items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.onclick = () => play(item.id.videoId, item.snippet.title);
+            card.innerHTML = `
+                <img src="${item.snippet.thumbnails.medium.url}">
+                <div class="card-info">
+                    <div class="card-title">${item.snippet.title}</div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function play(id, title) {
+        const viewport = document.getElementById('video-viewport');
+        const playerInner = document.getElementById('player-inner');
+        viewport.style.display = 'block';
+        document.getElementById('playing-title').innerText = title;
+        playerInner.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1" allowfullscreen allow="autoplay"></iframe>`;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>
