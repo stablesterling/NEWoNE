@@ -3,4 +3,4 @@ uvicorn
 ytmusicapi
 sqlalchemy
 psycopg2-binary
-passlib[bcrypt]
+bcrypt
