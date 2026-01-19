@@ -2,106 +2,152 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VoFo Music | Private Session</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoFo Music | Immersive Session</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0d0d0d; --gold: #c5a367; --soft: #e5e5e5; --muted: #666666; --serif: 'Cormorant Garamond', serif; --sans: 'Montserrat', sans-serif; }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { background: var(--bg); color: var(--soft); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+        
+        body { 
+            background: var(--bg); 
+            color: var(--soft); 
+            font-family: var(--sans); 
+            min-height: 100vh; 
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* IMMERSIVE BLUR BACKGROUND */
+        #bg-blur {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            filter: blur(60px) brightness(0.3);
+            transition: background-image 1.2s ease-in-out;
+            transform: scale(1.1); /* Prevents white edges from blur */
+        }
+
         .hidden { display: none !important; }
+        h1, h2, h3, .vofo-logo { font-family: var(--serif); }
+        .sub-header { font-size: 10px; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; font-weight: 500; text-align: center; }
+        .vofo-logo { font-size: clamp(3rem, 10vw, 6rem); font-weight: 500; color: var(--gold); letter-spacing: 8px; margin: 10px 0; text-transform: uppercase; line-height: 1; text-align: center; }
         
         /* AUTH UI */
-        .auth-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .auth-card { background: #111; padding: 30px; border-radius: 8px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; }
-        .auth-card h2 { font-family: var(--serif); color: var(--gold); margin-bottom: 25px; letter-spacing: 5px; }
-        .auth-card input { width: 100%; padding: 14px; margin-bottom: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 4px; outline: none; }
-        .auth-btn { width: 100%; padding: 14px; background: var(--gold); border: none; font-weight: 600; cursor: pointer; border-radius: 4px; margin-top: 10px; }
+        .auth-container { position: fixed; inset: 0; background: var(--bg); z-index: 5000; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .auth-card { background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px); padding: 40px; border-radius: 4px; width: 100%; max-width: 380px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .auth-card input { width: 100%; padding: 14px; margin-bottom: 12px; background: #000; border: 1px solid #222; color: white; outline: none; border-radius: 4px; }
+        .auth-btn { width: 100%; padding: 16px; background: var(--gold); border: none; font-weight: 600; cursor: pointer; color: #000; letter-spacing: 2px; text-transform: uppercase; border-radius: 4px; }
 
-        /* NAV & TABS */
-        nav { display: flex; justify-content: center; padding: 15px; border-bottom: 1px solid #1a1a1a; background: var(--bg); position: sticky; top: 0; z-index: 100; }
-        .tabs { display: flex; justify-content: center; gap: 30px; margin: 20px 0; }
-        .tab { font-size: 12px; color: var(--muted); cursor: pointer; letter-spacing: 2px; text-transform: uppercase; padding-bottom: 5px; border-bottom: 2px solid transparent; transition: 0.3s; }
-        .tab.active { color: var(--gold); border-bottom: 2px solid var(--gold); }
+        /* NAV */
+        nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.03); position: sticky; top: 0; z-index: 100; }
+        .nav-links span { font-size: 11px; letter-spacing: 2px; cursor: pointer; color: var(--muted); margin-left: 20px; text-transform: uppercase; transition: 0.3s; }
+        .nav-links span.active, .nav-links span:hover { color: var(--gold); }
 
-        /* SEARCH & CONTENT */
-        .hero { display: flex; flex-direction: column; align-items: center; padding: 0 20px; }
-        .search-box { width: 100%; max-width: 500px; margin-bottom: 25px; display: flex; gap: 8px; }
-        .search-box input { flex: 1; padding: 14px; background: #111; border: 1px solid #222; color: white; outline: none; border-radius: 4px; }
-        .container { width: 100%; max-width: 800px; margin: auto; padding-bottom: 140px; }
-        .section-title { font-family: var(--serif); color: var(--gold); font-size: 18px; margin: 15px 0; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
-
-        .track { padding: 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #111; cursor: pointer; }
-        .track:active { background: #1a1a1a; }
+        /* CONTENT */
+        .hero { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; }
+        .search-box { width: 100%; max-width: 500px; margin-top: 30px; display: flex; flex-direction: column; gap: 15px; }
+        .search-box input { width: 100%; padding: 18px; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; font-family: var(--serif); font-size: 20px; font-style: italic; outline: none; border-radius: 4px; }
+        
+        .container { width: 100%; max-width: 800px; margin: auto; padding-bottom: 150px; }
+        .track { padding: 15px 15px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; border-radius: 8px; }
+        .track:hover { background: rgba(255,255,255,0.05); }
         .track img { width: 50px; height: 50px; border-radius: 4px; object-fit: cover; }
-        .track-meta { flex: 1; overflow: hidden; }
-        .track-meta div:first-child { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .track-meta div:last-child { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+        .track-meta { flex: 1; }
+        .track-meta div:first-child { font-weight: 500; font-family: var(--serif); font-size: 18px; }
+        .track-meta div:last-child { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* PLAYER */
-        .player { position: fixed; bottom: 0; width: 100%; background: #050505; border-top: 1px solid #1a1a1a; padding: 12px 20px; display: flex; align-items: center; gap: 15px; z-index: 1000; }
-        #yt-player { position: absolute; opacity: 0; pointer-events: none; }
-        .p-thumb { width: 45px; height: 45px; border-radius: 4px; object-fit: cover; }
+        /* PLAYER BAR */
+        .player { position: fixed; bottom: 0; width: 100%; background: rgba(5,5,5,0.85); backdrop-filter: blur(25px); padding: 15px 30px; display: flex; align-items: center; gap: 25px; border-top: 1px solid rgba(255,255,255,0.05); z-index: 1000; }
+        .p-thumb { width: 55px; height: 55px; border-radius: 4px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
+        
         .player-info { flex: 1; min-width: 0; }
-        #pTitle { font-family: var(--serif); font-size: 14px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .controls { display: flex; align-items: center; gap: 15px; }
-        .like-icon { font-size: 20px; cursor: pointer; color: var(--muted); transition: 0.3s; }
-        .like-icon.liked { color: #ff4b2b; }
-        .play-btn { background: var(--gold); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; }
-        #progress-bar { width: 100%; height: 3px; background: #222; position: absolute; top: 0; left: 0; cursor: pointer; }
-        #progress-inner { height: 100%; background: var(--gold); width: 0%; }
+        #pTitle { font-family: var(--serif); font-size: 18px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .player-center { flex: 2; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .controls-main { display: flex; align-items: center; gap: 25px; }
+        .ctrl-btn { background: none; border: none; color: var(--soft); font-size: 22px; cursor: pointer; transition: 0.2s; opacity: 0.8; }
+        .ctrl-btn:hover { color: var(--gold); opacity: 1; }
+        .play-trigger { background: var(--gold); color: #000; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
+        
+        .progress-container { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 10px; color: var(--muted); font-weight: 600; }
+        #progress { flex: 1; height: 4px; accent-color: var(--gold); cursor: pointer; }
+
+        .player-right { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 15px; }
+        #likeBtn { cursor: pointer; font-size: 20px; transition: 0.3s; color: var(--muted); }
+        #likeBtn.liked { color: #ff4b2b; }
+        .volume-ctrl { width: 80px; height: 3px; accent-color: var(--gold); cursor: pointer; }
+
+        #yt-player { position: absolute; opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div id="authOverlay" class="auth-overlay">
-    <div class="auth-card">
-        <h2 id="authTitle">VOFO</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button class="auth-btn" onclick="handleAuth()">CONTINUE</button>
-        <p id="authSwitch" style="font-size: 11px; margin-top: 20px; color: var(--muted); cursor: pointer;" onclick="toggleAuthMode()">New here? Create account</p>
+<div id="bg-blur"></div>
+
+<div id="authScreen" class="auth-container">
+    <div id="loginForm" class="auth-card">
+        <div class="sub-header">Access The Studio</div>
+        <div class="vofo-logo">VoFo</div>
+        <input type="text" id="lUser" placeholder="IDENTITY">
+        <input type="password" id="lPass" placeholder="ENCRYPTION">
+        <button class="auth-btn" onclick="handleAuth()">Initialize</button>
+        <p style="font-size:10px; margin-top:20px; cursor:pointer; color:var(--muted)" onclick="toggleAuth()">CREATE ACCOUNT</p>
     </div>
 </div>
 
-<div id="mainApp" class="hidden">
-    <nav><div style="font-family: var(--serif); color:var(--gold); letter-spacing: 4px; font-size: 20px;">VOFO MUSIC</div></nav>
-    
-    <div class="hero">
-        <div class="tabs">
-            <div id="tabExp" class="tab active" onclick="switchTab('explore')">Explore</div>
-            <div id="tabLib" class="tab" onclick="switchTab('library')">Library</div>
+<div id="app" class="hidden">
+    <nav>
+        <div style="font-family: var(--serif); color:var(--gold); font-size: 24px; letter-spacing: 5px;">VOFO</div>
+        <div class="nav-links">
+            <span id="navExplore" class="active" onclick="switchTab('explore')">Frequency</span>
+            <span id="navLibrary" onclick="switchTab('library')">Curation</span>
         </div>
+    </nav>
 
-        <div id="exploreView" style="width: 100%; max-width: 500px;">
-            <div class="search-box">
-                <input id="searchInput" placeholder="Search artists or tracks..." onkeypress="if(event.key==='Enter') doSearch()">
-                <button class="auth-btn" style="margin:0; width:60px;" onclick="doSearch()">GO</button>
-            </div>
-            <div class="container">
-                <div id="statusHeader" class="section-title">Trending</div>
-                <div id="results"></div>
-            </div>
+    <div id="exploreTab" class="hero">
+        <div class="vofo-logo">VoFo</div>
+        <div class="search-box">
+            <input id="searchInput" placeholder="Search mood or track..." onkeypress="if(event.key==='Enter') doSearch()">
+            <button class="auth-btn" onclick="doSearch()">Explore</button>
         </div>
+        <div id="results" class="container"></div>
+    </div>
 
-        <div id="libraryView" class="container hidden">
-            <div class="section-title">Liked Songs</div>
-            <div id="likedResults"></div>
-        </div>
+    <div id="libraryTab" class="hero hidden">
+        <div class="vofo-logo">Curation</div>
+        <div id="libraryResults" class="container"></div>
     </div>
 </div>
 
 <div class="player hidden" id="playerBar">
-    <div id="progress-bar" onclick="seek(event)"><div id="progress-inner"></div></div>
     <div id="yt-player"></div>
     <img id="pThumb" class="p-thumb" src="">
+    
     <div class="player-info">
         <div id="pTitle">...</div>
-        <div id="pArtist" style="font-size: 10px; color: var(--muted);">...</div>
+        <div id="pArtist" style="font-size: 10px; color: var(--muted); text-transform: uppercase;">...</div>
     </div>
-    <div class="controls">
-        <div id="likeBtn" class="like-icon" onclick="toggleLikeCurrent()">❤</div>
-        <button id="playBtn" class="play-btn" onclick="togglePlay()">▶</button>
+
+    <div class="player-center">
+        <div class="controls-main">
+            <button class="ctrl-btn" onclick="skipPrev()">⏮</button>
+            <button class="ctrl-btn play-trigger" id="playBtn" onclick="togglePlay()">▶</button>
+            <button class="ctrl-btn" onclick="skipNext()">⏭</button>
+        </div>
+        <div class="progress-container">
+            <span id="curTime">0:00</span>
+            <input type="range" id="progress" value="0" step="1" oninput="seek(this.value)">
+            <span id="durTime">0:00</span>
+        </div>
+    </div>
+
+    <div class="player-right">
+        <div id="likeBtn" onclick="toggleLikeCurrent()">❤</div>
+        <span style="font-size: 14px; color: var(--muted);">🔈</span>
+        <input type="range" class="volume-ctrl" min="0" max="100" value="100" oninput="setVolume(this.value)">
     </div>
 </div>
 
@@ -110,58 +156,51 @@
     let player, currentUser = null, isLoginMode = true;
     let currentPlaylist = [], currentIndex = -1;
 
-    // --- AUTH LOGIC ---
-    function toggleAuthMode() {
+    function toggleAuth() {
         isLoginMode = !isLoginMode;
-        document.getElementById('authTitle').innerText = isLoginMode ? "VOFO" : "REGISTER";
-        document.getElementById('authSwitch').innerText = isLoginMode ? "New here? Create account" : "Have an account? Login";
+        document.querySelector('#loginForm .vofo-logo').innerText = isLoginMode ? "VoFo" : "Registry";
+        document.querySelector('#loginForm .auth-btn').innerText = isLoginMode ? "Initialize" : "Register";
+        document.querySelector('#loginForm p').innerText = isLoginMode ? "CREATE ACCOUNT" : "BACK TO LOGIN";
     }
 
     async function handleAuth() {
-        const u = document.getElementById('username').value;
-        const p = document.getElementById('password').value;
-        if(!u || !p) return alert("Fill all fields");
-
+        const u = document.getElementById('lUser').value;
+        const p = document.getElementById('lPass').value;
         const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username: u, password: p})
         });
-
         const data = await res.json();
         if(data.success) {
             if(isLoginMode) {
                 currentUser = data;
-                document.getElementById('authOverlay').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
                 fetchTrending();
-            } else {
-                alert("Account created! Now login.");
-                toggleAuthMode();
-            }
-        } else { alert("Error: " + (data.detail || "Failed")); }
+            } else { alert("Registry successful. Access now."); toggleAuth(); }
+        } else { alert("Access Denied: Invalid Credentials"); }
     }
 
-    // --- TAB LOGIC ---
-    function switchTab(mode) {
-        document.getElementById('exploreView').classList.toggle('hidden', mode === 'library');
-        document.getElementById('libraryView').classList.toggle('hidden', mode === 'explore');
-        document.getElementById('tabExp').classList.toggle('active', mode === 'explore');
-        document.getElementById('tabLib').classList.toggle('active', mode === 'library');
-        if(mode === 'library') fetchLiked();
-    }
-
-    // --- MUSIC LOGIC ---
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('yt-player', {
-            events: { 
+            playerVars: { 'autoplay': 1, 'controls': 0 },
+            events: {
                 'onStateChange': (e) => {
                     document.getElementById('playBtn').innerText = e.data === 1 ? "||" : "▶";
                     if(e.data === 0) skipNext();
                 }
             }
         });
-        setInterval(updateProgress, 1000);
+        setInterval(updateUI, 1000);
+    }
+
+    function switchTab(tab) {
+        exploreTab.classList.toggle('hidden', tab!=='explore');
+        libraryTab.classList.toggle('hidden', tab!=='library');
+        navExplore.classList.toggle('active', tab==='explore');
+        navLibrary.classList.toggle('active', tab==='library');
+        if(tab==='library') fetchLiked();
     }
 
     async function fetchTrending() {
@@ -171,17 +210,16 @@
     }
 
     async function doSearch() {
-        const q = document.getElementById('searchInput').value;
+        const q = searchInput.value;
+        if(!q) return;
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
         const data = await res.json();
-        document.getElementById('statusHeader').innerText = "Search Results";
         renderTracks(data, 'results');
     }
 
-    function renderTracks(tracks, targetId) {
-        const list = document.getElementById(targetId);
-        list.innerHTML = tracks.map((s, i) => `
-            <div class="track" onclick="startPlaylist(${i}, ${JSON.stringify(tracks).replace(/"/g, '&quot;')})">
+    function renderTracks(tracks, target) {
+        document.getElementById(target).innerHTML = tracks.map((s, i) => `
+            <div class="track" onclick='startPlaylist(${i}, ${JSON.stringify(tracks).replace(/'/g, "&apos;")})'>
                 <img src="${s.thumbnail}">
                 <div class="track-meta"><div>${s.title}</div><div>${s.artist}</div></div>
             </div>
@@ -196,65 +234,77 @@
     function playSong(index) {
         currentIndex = index;
         const song = currentPlaylist[index];
+        
+        // Show player
         document.getElementById('playerBar').classList.remove('hidden');
-        document.getElementById('pTitle').innerText = song.title;
-        document.getElementById('pArtist').innerText = song.artist;
-        document.getElementById('pThumb').src = song.thumbnail;
+        
+        // Update UI
+        pTitle.innerText = song.title;
+        pArtist.innerText = song.artist;
+        pThumb.src = song.thumbnail;
+        
+        // Update Blurred Background
+        document.getElementById('bg-blur').style.backgroundImage = `url('${song.thumbnail}')`;
+        
         player.loadVideoById(song.id);
         checkIfLiked(song.id);
     }
 
     function togglePlay() {
-        const state = player.getPlayerState();
-        state === 1 ? player.pauseVideo() : player.playVideo();
+        if(player.getPlayerState() === 1) player.pauseVideo();
+        else player.playVideo();
     }
 
-    function skipNext() {
-        if(currentIndex < currentPlaylist.length - 1) playSong(currentIndex + 1);
-    }
+    function skipNext() { if(currentIndex < currentPlaylist.length - 1) playSong(currentIndex + 1); }
+    function skipPrev() { if(currentIndex > 0) playSong(currentIndex - 1); }
+    
+    function setVolume(val) { player.setVolume(val); }
+    function seek(val) { player.seekTo((val / 100) * player.getDuration()); }
 
-    function seek(e) {
-        const bar = document.getElementById('progress-bar');
-        const pct = e.offsetX / bar.offsetWidth;
-        player.seekTo(pct * player.getDuration());
-    }
-
-    function updateProgress() {
-        if(player && player.getDuration && player.getDuration() > 0) {
-            const pct = (player.getCurrentTime() / player.getDuration()) * 100;
-            document.getElementById('progress-inner').style.width = pct + "%";
+    function updateUI() {
+        if(player && player.getDuration) {
+            const cur = player.getCurrentTime();
+            const dur = player.getDuration();
+            if(dur > 0) {
+                progress.value = (cur / dur) * 100;
+                curTime.innerText = formatTime(cur);
+                durTime.innerText = formatTime(dur);
+            }
         }
     }
 
-    // --- LIKED SONGS LOGIC ---
+    function formatTime(s) {
+        const min = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+
     async function toggleLikeCurrent() {
         const song = currentPlaylist[currentIndex];
         const res = await fetch('/api/like', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                user_id: currentUser.user_id,
-                song_id: song.id,
-                title: song.title,
-                artist: song.artist,
-                thumbnail: song.thumbnail
+                user_id: currentUser.user_id, song_id: song.id,
+                title: song.title, artist: song.artist, thumbnail: song.thumbnail
             })
         });
         const data = await res.json();
-        document.getElementById('likeBtn').classList.toggle('liked', data.status === 'liked');
+        likeBtn.classList.toggle('liked', data.status === 'liked');
+        if(!libraryTab.classList.contains('hidden')) fetchLiked();
     }
 
     async function fetchLiked() {
         const res = await fetch(`/api/liked/${currentUser.user_id}`);
         const data = await res.json();
-        renderTracks(data, 'likedResults');
+        renderTracks(data, 'libraryResults');
     }
 
     async function checkIfLiked(id) {
         const res = await fetch(`/api/liked/${currentUser.user_id}`);
         const data = await res.json();
         const isLiked = data.some(s => s.id === id);
-        document.getElementById('likeBtn').classList.toggle('liked', isLiked);
+        likeBtn.classList.toggle('liked', isLiked);
     }
 </script>
 </body>
