@@ -3,15 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoFo Music | Professional Immersive</title>
+    <title>VoFo Music | Immersive Session</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0d0d0d; --gold: #c5a367; --soft: #e5e5e5; --muted: #666666; --silver: #b0b0b0; --serif: 'Cormorant Garamond', serif; --sans: 'Montserrat', sans-serif; }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
-        body { background: var(--bg); color: var(--soft); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; position: relative; }
+        body { 
+            background: var(--bg); 
+            color: var(--soft); 
+            font-family: var(--sans); 
+            min-height: 100vh; 
+            overflow-x: hidden;
+            position: relative;
+        }
 
-        #bg-blur { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-size: cover; background-position: center; filter: blur(80px) brightness(0.25); transition: background-image 1.5s ease; transform: scale(1.1); }
+        #bg-blur {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            filter: blur(80px) brightness(0.25);
+            transition: background-image 1.5s ease;
+            transform: scale(1.1);
+        }
 
         .hidden { display: none !important; }
         .vofo-logo { font-family: var(--serif); font-size: clamp(3rem, 10vw, 6rem); font-weight: 500; color: var(--gold); letter-spacing: 8px; margin: 10px 0; text-transform: uppercase; text-align: center; }
@@ -23,57 +39,97 @@
         .auth-btn { width: 100%; padding: 16px; background: var(--gold); border: none; font-weight: 600; cursor: pointer; color: #000; letter-spacing: 2px; text-transform: uppercase; border-radius: 4px; }
 
         /* NAV */
-        nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; position: sticky; top: 0; z-index: 100; background: rgba(13, 13, 13, 0.4); backdrop-filter: blur(25px); border-bottom: 1px solid rgba(197, 163, 103, 0.4); }
+        nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 20px 40px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            background: rgba(13, 13, 13, 0.4); 
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-bottom: 1px solid rgba(197, 163, 103, 0.4); 
+        }
+        .nav-links { display: flex; align-items: center; }
         .nav-links span { font-size: 11px; letter-spacing: 2px; cursor: pointer; color: var(--muted); margin-left: 25px; text-transform: uppercase; transition: 0.3s; }
         .nav-links span.active, .nav-links span:hover { color: var(--gold); }
+        .logout-link { border: 1px solid rgba(197, 163, 103, 0.2); padding: 5px 12px; border-radius: 4px; }
+        .logout-link:hover { background: rgba(197, 163, 103, 0.1); }
 
         /* CONTENT */
         .hero { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; }
         .search-box { width: 100%; max-width: 500px; margin-top: 30px; display: flex; flex-direction: column; gap: 15px; }
-        .search-box input { width: 100%; padding: 18px; text-align: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-family: var(--serif); font-size: 20px; outline: none; border-radius: 8px; }
+        .search-box input { width: 100%; padding: 18px; text-align: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; font-family: var(--serif); font-size: 20px; font-style: italic; outline: none; border-radius: 8px; }
         
         .container { width: 100%; max-width: 800px; margin: auto; padding-bottom: 180px; }
-        .track { padding: 15px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; }
+        .track { padding: 15px 15px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: 0.2s; border-radius: 8px; }
         .track:hover { background: rgba(255,255,255,0.05); }
-        .track img { width: 50px; height: 50px; border-radius: 6px; }
+        .track img { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; }
+        .track-meta div:first-child { font-weight: 500; font-family: var(--serif); font-size: 18px; }
+        .track-meta div:last-child { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* EQUALIZER STYLES */
-        .eq-container { margin-top: 30px; display: none; width: 100%; max-width: 400px; animation: fadeIn 0.5s ease; }
-        .player.expanded .eq-container { display: block; }
-        .eq-grid { display: flex; justify-content: space-between; gap: 10px; height: 120px; margin-bottom: 20px; }
-        .eq-slider-wrapper { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .eq-slider-wrapper input { writing-mode: bt-lr; -webkit-appearance: slider-vertical; width: 8px; height: 100px; accent-color: var(--gold); }
-        .eq-label { font-size: 8px; color: var(--muted); margin-top: 8px; text-transform: uppercase; }
-        .eq-presets { display: flex; gap: 8px; justify-content: center; margin-top: 15px; }
-        .preset-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(197, 163, 103, 0.3); color: var(--soft); font-size: 9px; padding: 5px 10px; cursor: pointer; border-radius: 4px; text-transform: uppercase; transition: 0.3s; }
-        .preset-btn:hover, .preset-btn.active { background: var(--gold); color: #000; }
+        /* FLOATING MUSIC CONTROLLER */
+        .player { 
+            position: fixed; 
+            bottom: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%; 
+            max-width: 800px;
+            background: rgba(15, 15, 15, 0.7); 
+            backdrop-filter: blur(30px) saturate(150%); 
+            padding: 12px 25px; 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            border-radius: 20px; 
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        }
+        
+        .player.expanded {
+            bottom: 0; left: 0; transform: none; width: 100%; height: 100%; max-width: none; border-radius: 0; flex-direction: column; justify-content: center; padding: 40px 20px; background: var(--bg);
+        }
 
-        /* PLAYER */
-        .player { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 800px; background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(30px); padding: 12px 25px; display: flex; align-items: center; gap: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; z-index: 1000; box-shadow: 0 20px 40px rgba(0,0,0,0.6); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1); }
-        .player.expanded { bottom: 0; left: 0; transform: none; width: 100%; height: 100%; max-width: none; border-radius: 0; flex-direction: column; justify-content: center; background: var(--bg); padding-top: 80px; }
-
-        .back-btn { position: absolute; top: 40px; left: 30px; font-size: 24px; color: var(--gold); display: none; cursor: pointer; }
+        .back-btn { position: absolute; top: 40px; left: 30px; font-size: 24px; color: var(--gold); display: none; cursor: pointer; z-index: 1001; }
         .player.expanded .back-btn { display: block; }
 
-        .p-thumb { width: 50px; height: 50px; border-radius: 10px; transition: 0.5s; }
-        .player.expanded .p-thumb { width: 280px; height: 280px; border-radius: 20px; margin-bottom: 20px; box-shadow: 0 10px 50px rgba(0,0,0,0.8); }
+        .p-thumb { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; transition: 0.5s; }
+        .player.expanded .p-thumb {
+            width: 80vw; max-width: 350px; height: 80vw; max-height: 350px; margin-bottom: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
 
-        #pTitle { font-family: var(--serif); font-size: 17px; color: var(--gold); }
-        .player.expanded #pTitle { font-size: 24px; text-align: center; }
+        .player-info { flex: 1; min-width: 0; transition: 0.5s; }
+        .player.expanded .player-info { flex: none; text-align: center; width: 100%; margin-bottom: 30px; }
 
-        .play-trigger { background: var(--gold); color: #000; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border:none; cursor: pointer; }
-        .player.expanded .play-trigger { width: 65px; height: 65px; font-size: 20px; }
+        #pTitle { font-family: var(--serif); font-size: 17px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player.expanded #pTitle { font-size: 28px; white-space: normal; overflow: visible; }
+        
+        .player-center { flex: 2; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: 0.5s; }
+        .player.expanded .player-center { flex: none; width: 100%; }
 
+        .controls-main { display: flex; align-items: center; gap: 20px; }
+        .player.expanded .controls-main { gap: 40px; margin-bottom: 20px; }
+
+        .ctrl-btn { background: none; border: none; color: var(--soft); font-size: 20px; cursor: pointer; transition: 0.2s; }
+        .play-trigger { background: var(--gold); color: #000; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; }
+        .player.expanded .play-trigger { width: 70px; height: 70px; font-size: 24px; }
+        
         .progress-container { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 9px; color: var(--muted); }
         #progress { flex: 1; height: 3px; accent-color: var(--gold); cursor: pointer; }
 
-        #likeBtn { cursor: pointer; font-size: 20px; color: var(--muted); transition: 0.3s; }
+        .player-right { flex: 0.5; display: flex; align-items: center; justify-content: flex-end; }
+        .player.expanded .player-right { position: absolute; bottom: 120px; right: 40px; }
+
+        #likeBtn { cursor: pointer; font-size: 18px; color: var(--muted); transition: 0.3s; }
         #likeBtn.liked { color: #ff4b2b; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        footer { padding: 40px 20px 140px 20px; text-align: center; font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-        .company { color: var(--gold); font-family: var(--serif); font-weight: 600; }
+        footer { padding: 40px 20px 140px 20px; text-align: center; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); line-height: 2; }
+        .company { color: var(--gold); font-weight: 600; font-family: var(--serif); }
         #yt-player { position: absolute; opacity: 0; pointer-events: none; }
     </style>
 </head>
@@ -97,7 +153,7 @@
         <div class="nav-links">
             <span id="navExplore" class="active" onclick="switchTab('explore')">Frequency</span>
             <span id="navLibrary" onclick="switchTab('library')">Liked Songs</span>
-            <span id="navLogout" onclick="handleLogout()">Logout</span>
+            <span id="navLogout" class="logout-link" onclick="handleLogout()">Logout</span>
         </div>
     </nav>
 
@@ -116,8 +172,9 @@
     </div>
 
     <footer>
-        <div>&copy; 2026 VOFO MUSIC SYSTEM | DESIGNED BY ABHIRAM</div>
-        <div class="company">PLYBOYZ COMPANY &reg;</div>
+        <div>&copy; 2026 ALL RIGHTS RESERVED</div>
+        <div>DESIGNED AND ENGINEERED BY <span class="designer">ABHIRAM</span></div>
+        <div>IN COLLAB WITH <span class="company">PLYBOYZ COMPANY</span> &reg;</div>
     </footer>
 </div>
 
@@ -132,26 +189,11 @@
     </div>
 
     <div class="player-center">
-        <div class="eq-container" onclick="event.stopPropagation()">
-            <div class="eq-grid">
-                <div class="eq-slider-wrapper"><input type="range" id="eq-low" min="-10" max="10" value="0" oninput="updateEQ()"><div class="eq-label">Bass</div></div>
-                <div class="eq-slider-wrapper"><input type="range" id="eq-mid" min="-10" max="10" value="0" oninput="updateEQ()"><div class="eq-label">Mid</div></div>
-                <div class="eq-slider-wrapper"><input type="range" id="eq-high" min="-10" max="10" value="0" oninput="updateEQ()"><div class="eq-label">Treble</div></div>
-            </div>
-            <div class="eq-presets">
-                <button class="preset-btn" onclick="setPreset('flat')">Flat</button>
-                <button class="preset-btn" onclick="setPreset('rock')">Rock</button>
-                <button class="preset-btn" onclick="setPreset('jazz')">Jazz</button>
-                <button class="preset-btn" onclick="setPreset('metal')">Metal</button>
-            </div>
-        </div>
-
         <div class="controls-main">
-            <button class="ctrl-btn" onclick="event.stopPropagation(); skipPrev()" style="background:none; border:none; color:white; cursor:pointer;">⏮</button>
-            <button class="play-trigger" id="playBtn" onclick="event.stopPropagation(); togglePlay()">▶</button>
-            <button class="ctrl-btn" onclick="event.stopPropagation(); skipNext()" style="background:none; border:none; color:white; cursor:pointer;">⏭</button>
+            <button class="ctrl-btn" onclick="event.stopPropagation(); skipPrev()">⏮</button>
+            <button class="ctrl-btn play-trigger" id="playBtn" onclick="event.stopPropagation(); togglePlay()">▶</button>
+            <button class="ctrl-btn" onclick="event.stopPropagation(); skipNext()">⏭</button>
         </div>
-        
         <div class="progress-container">
             <span id="curTime">0:00</span>
             <input type="range" id="progress" value="0" step="1" onclick="event.stopPropagation()" oninput="seek(this.value)">
@@ -169,34 +211,6 @@
     let player, currentUser = null, isLoginMode = true;
     let currentPlaylist = [], currentIndex = -1;
 
-    // --- Equalizer Logic ---
-    // Note: Due to YouTube Iframe limitations, these visualizes the user's intent 
-    // for a professional UI. Full signal processing requires a local audio source.
-    function updateEQ() {
-        const low = document.getElementById('eq-low').value;
-        const mid = document.getElementById('eq-mid').value;
-        const high = document.getElementById('eq-high').value;
-        console.log(`Audio Filter Applied - B:${low} M:${mid} T:${high}`);
-    }
-
-    function setPreset(type) {
-        const sliders = {
-            flat: [0, 0, 0],
-            rock: [6, 2, 5],
-            jazz: [3, 1, 4],
-            metal: [8, -2, 7]
-        };
-        const vals = sliders[type];
-        document.getElementById('eq-low').value = vals[0];
-        document.getElementById('eq-mid').value = vals[1];
-        document.getElementById('eq-high').value = vals[2];
-        
-        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
-        updateEQ();
-    }
-
-    // --- CORE LOGIC ---
     function toggleExpand(e) {
         const playerBar = document.getElementById('playerBar');
         if (!playerBar.classList.contains('expanded')) playerBar.classList.add('expanded');
@@ -210,13 +224,36 @@
     function toggleAuth() {
         isLoginMode = !isLoginMode;
         document.querySelector('#loginForm .vofo-logo').innerText = isLoginMode ? "VoFo" : "Registry";
+        document.querySelector('#loginForm .auth-btn').innerText = isLoginMode ? "Initialize" : "Register";
+        document.querySelector('#loginForm p').innerText = isLoginMode ? "CREATE ACCOUNT" : "BACK TO LOGIN";
     }
 
     async function handleAuth() {
-        // Logic remains same as previous version but ensures UI transition
-        currentUser = { user_id: 1, username: 'User' }; // Simulation
-        document.getElementById('authScreen').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
+        const u = document.getElementById('lUser').value;
+        const p = document.getElementById('lPass').value;
+        const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p})
+        });
+        const data = await res.json();
+        if(data.success) {
+            if(isLoginMode) {
+                currentUser = data;
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                fetchTrending();
+            } else { alert("Registry successful."); toggleAuth(); }
+        } else { alert("Access Denied"); }
+    }
+
+    function handleLogout() {
+        currentUser = null;
+        if(player && player.stopVideo) player.stopVideo();
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('playerBar').classList.add('hidden');
+        document.getElementById('authScreen').classList.remove('hidden');
+        document.getElementById('bg-blur').style.backgroundImage = 'none';
     }
 
     function onYouTubeIframeAPIReady() {
@@ -240,29 +277,18 @@
         if(tab==='library') fetchLiked();
     }
 
-    // --- UPDATED STACK LOGIC ---
-    async function fetchLiked() {
-        if(!currentUser) return;
-        const res = await fetch(`/api/liked/${currentUser.user_id}`);
+    async function fetchTrending() {
+        const res = await fetch('/api/trending');
         const data = await res.json();
-        
-        // STACK BEHAVIOR: Newest (Last in array) moves to the Top
-        const stackData = [...data].reverse();
-        renderTracks(stackData, 'libraryResults');
+        renderTracks(data, 'results');
     }
 
-    async function toggleLikeCurrent() {
-        const song = currentPlaylist[currentIndex];
-        await fetch('/api/like', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: currentUser.user_id, song_id: song.id,
-                title: song.title, artist: song.artist, thumbnail: song.thumbnail
-            })
-        });
-        checkIfLiked(song.id);
-        fetchLiked(); // Instant stack update
+    async function doSearch() {
+        const q = searchInput.value;
+        if(!q) return;
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        renderTracks(data, 'results');
     }
 
     function renderTracks(tracks, target) {
@@ -293,7 +319,8 @@
 
     function togglePlay() {
         const state = player.getPlayerState();
-        state === 1 ? player.pauseVideo() : player.playVideo();
+        if(state === 1) player.pauseVideo();
+        else player.playVideo();
     }
 
     function skipNext() { if(currentIndex < currentPlaylist.length - 1) playSong(currentIndex + 1); }
@@ -316,6 +343,35 @@
         const min = Math.floor(s / 60);
         const sec = Math.floor(s % 60);
         return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    }
+
+    // UPDATED LOGIC FOR STACK BEHAVIOR
+    async function toggleLikeCurrent() {
+        const song = currentPlaylist[currentIndex];
+        const res = await fetch('/api/like', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                user_id: currentUser.user_id, song_id: song.id,
+                title: song.title, artist: song.artist, thumbnail: song.thumbnail
+            })
+        });
+        const data = await res.json();
+        likeBtn.classList.toggle('liked', data.status === 'liked');
+        
+        // Refresh the library immediately so the new song pops to the top
+        fetchLiked();
+    }
+
+    // UPDATED LOGIC TO SORT NEWEST AT TOP
+    async function fetchLiked() {
+        if(!currentUser) return;
+        const res = await fetch(`/api/liked/${currentUser.user_id}`);
+        const data = await res.json();
+        
+        // Assuming API returns songs in order added, .reverse() puts newest on top
+        const stackOrder = [...data].reverse(); 
+        renderTracks(stackOrder, 'libraryResults');
     }
 
     async function checkIfLiked(id) {
