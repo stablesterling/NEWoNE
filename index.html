@@ -70,7 +70,7 @@
         .track-meta div:first-child { font-weight: 500; font-family: var(--serif); font-size: 18px; }
         .track-meta div:last-child { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* FLOATING MUSIC CONTROLLER & EXPANDED VIEW */
+        /* FLOATING MUSIC CONTROLLER */
         .player { 
             position: fixed; 
             bottom: 30px; 
@@ -91,55 +91,23 @@
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         }
         
-        /* Expanded State Styles */
         .player.expanded {
-            bottom: 0;
-            left: 0;
-            transform: none;
-            width: 100%;
-            height: 100%;
-            max-width: none;
-            border-radius: 0;
-            flex-direction: column;
-            justify-content: center;
-            padding: 40px 20px;
-            background: var(--bg);
+            bottom: 0; left: 0; transform: none; width: 100%; height: 100%; max-width: none; border-radius: 0; flex-direction: column; justify-content: center; padding: 40px 20px; background: var(--bg);
         }
 
-        .back-btn {
-            position: absolute;
-            top: 40px;
-            left: 30px;
-            font-size: 24px;
-            color: var(--gold);
-            display: none;
-            cursor: pointer;
-            z-index: 1001;
-        }
+        .back-btn { position: absolute; top: 40px; left: 30px; font-size: 24px; color: var(--gold); display: none; cursor: pointer; z-index: 1001; }
         .player.expanded .back-btn { display: block; }
 
         .p-thumb { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; transition: 0.5s; }
         .player.expanded .p-thumb {
-            width: 80vw;
-            max-width: 350px;
-            height: 80vw;
-            max-height: 350px;
-            margin-bottom: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            width: 80vw; max-width: 350px; height: 80vw; max-height: 350px; margin-bottom: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
         }
 
         .player-info { flex: 1; min-width: 0; transition: 0.5s; }
-        .player.expanded .player-info { 
-            flex: none; 
-            text-align: center; 
-            width: 100%; 
-            margin-bottom: 30px;
-        }
+        .player.expanded .player-info { flex: none; text-align: center; width: 100%; margin-bottom: 30px; }
 
         #pTitle { font-family: var(--serif); font-size: 17px; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .player.expanded #pTitle { font-size: 28px; white-space: normal; overflow: visible; }
-        .player.expanded #pArtist { font-size: 14px; margin-top: 5px; }
         
         .player-center { flex: 2; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: 0.5s; }
         .player.expanded .player-center { flex: none; width: 100%; }
@@ -153,7 +121,6 @@
         
         .progress-container { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 9px; color: var(--muted); }
         #progress { flex: 1; height: 3px; accent-color: var(--gold); cursor: pointer; }
-        .player.expanded #progress { height: 6px; }
 
         .player-right { flex: 0.5; display: flex; align-items: center; justify-content: flex-end; }
         .player.expanded .player-right { position: absolute; bottom: 120px; right: 40px; }
@@ -161,19 +128,8 @@
         #likeBtn { cursor: pointer; font-size: 18px; color: var(--muted); transition: 0.3s; }
         #likeBtn.liked { color: #ff4b2b; }
 
-        /* FOOTER */
-        footer {
-            padding: 40px 20px 140px 20px; 
-            text-align: center;
-            font-size: 10px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: var(--muted);
-            line-height: 2;
-        }
-        .designer { color: var(--silver); font-weight: 500; }
+        footer { padding: 40px 20px 140px 20px; text-align: center; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); line-height: 2; }
         .company { color: var(--gold); font-weight: 600; font-family: var(--serif); }
-
         #yt-player { position: absolute; opacity: 0; pointer-events: none; }
     </style>
 </head>
@@ -255,17 +211,13 @@
     let player, currentUser = null, isLoginMode = true;
     let currentPlaylist = [], currentIndex = -1;
 
-    // Expand Logic
     function toggleExpand(e) {
         const playerBar = document.getElementById('playerBar');
-        // Prevent expanding if clicking controls specifically, though stopPropagation handled it
-        if (!playerBar.classList.contains('expanded')) {
-            playerBar.classList.add('expanded');
-        }
+        if (!playerBar.classList.contains('expanded')) playerBar.classList.add('expanded');
     }
 
     function closeExpand(e) {
-        e.stopPropagation(); // Don't re-trigger toggleExpand
+        e.stopPropagation();
         document.getElementById('playerBar').classList.remove('expanded');
     }
 
@@ -279,40 +231,29 @@
     async function handleAuth() {
         const u = document.getElementById('lUser').value;
         const p = document.getElementById('lPass').value;
-        
         const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username: u, password: p})
         });
         const data = await res.json();
-        
         if(data.success) {
             if(isLoginMode) {
                 currentUser = data;
                 document.getElementById('authScreen').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 fetchTrending();
-            } else { 
-                alert("Registry successful."); 
-                toggleAuth(); 
-            }
-        } else { 
-            alert("Access Denied"); 
-        }
+            } else { alert("Registry successful."); toggleAuth(); }
+        } else { alert("Access Denied"); }
     }
 
     function handleLogout() {
         currentUser = null;
         if(player && player.stopVideo) player.stopVideo();
-        
         document.getElementById('app').classList.add('hidden');
         document.getElementById('playerBar').classList.add('hidden');
         document.getElementById('authScreen').classList.remove('hidden');
-        document.getElementById('lUser').value = '';
-        document.getElementById('lPass').value = '';
         document.getElementById('bg-blur').style.backgroundImage = 'none';
-        document.getElementById('playerBar').classList.remove('expanded');
     }
 
     function onYouTubeIframeAPIReady() {
@@ -404,6 +345,7 @@
         return `${min}:${sec < 10 ? '0' : ''}${sec}`;
     }
 
+    // UPDATED LOGIC FOR STACK BEHAVIOR
     async function toggleLikeCurrent() {
         const song = currentPlaylist[currentIndex];
         const res = await fetch('/api/like', {
@@ -416,13 +358,20 @@
         });
         const data = await res.json();
         likeBtn.classList.toggle('liked', data.status === 'liked');
-        if(!libraryTab.classList.contains('hidden')) fetchLiked();
+        
+        // Refresh the library immediately so the new song pops to the top
+        fetchLiked();
     }
 
+    // UPDATED LOGIC TO SORT NEWEST AT TOP
     async function fetchLiked() {
+        if(!currentUser) return;
         const res = await fetch(`/api/liked/${currentUser.user_id}`);
         const data = await res.json();
-        renderTracks(data, 'libraryResults');
+        
+        // Assuming API returns songs in order added, .reverse() puts newest on top
+        const stackOrder = [...data].reverse(); 
+        renderTracks(stackOrder, 'libraryResults');
     }
 
     async function checkIfLiked(id) {
