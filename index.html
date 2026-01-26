@@ -140,9 +140,9 @@
 <div id="authScreen" class="auth-container">
     <div id="loginForm" class="auth-card">
         <div class="vofo-logo" style="font-size: 3rem;">VoFo</div>
-        <input type="text" id="lUser" placeholder="IDENTITY">
-        <input type="password" id="lPass" placeholder="ENCRYPTION">
-        <button class="auth-btn" onclick="handleAuth()">Initialize</button>
+        <input type="text" id="lUser" placeholder="USERNAME">
+        <input type="password" id="lPass" placeholder="PASSWORD">
+        <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">LOGIN</button>
         <p style="font-size:10px; margin-top:20px; cursor:pointer; color:var(--muted)" onclick="toggleAuth()">CREATE ACCOUNT</p>
     </div>
 </div>
@@ -160,8 +160,8 @@
     <div id="exploreTab" class="hero">
         <div class="vofo-logo">VoFo</div>
         <div class="search-box">
-            <input id="searchInput" placeholder="Search track..." onkeypress="if(event.key==='Enter') doSearch()">
-            <button class="auth-btn" style="padding: 12px;" onclick="doSearch()">Explore</button>
+            <input id="searchInput" placeholder="Search Music..." onkeypress="if(event.key==='Enter') doSearch()">
+            <button class="auth-btn" style="padding: 12px;" onclick="doSearch()">SEARCH</button>
         </div>
         <div id="results" class="container"></div>
     </div>
@@ -207,9 +207,42 @@
 </div>
 
 <script src="https://www.youtube.com/iframe_api"></script>
+<script src="cordova.js"></script>
 <script>
     let player, currentUser = null, isLoginMode = true;
     let currentPlaylist = [], currentIndex = -1;
+
+    // --- INITIALIZATION & PERSISTENCE ---
+    window.onload = () => {
+        const savedUser = localStorage.getItem('vofo_user');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            fetchTrending();
+        }
+    };
+
+    // --- NATIVE BACKGROUND MODE ---
+    document.addEventListener('deviceready', () => {
+        if (window.cordova && cordova.plugins && cordova.plugins.backgroundMode) {
+            cordova.plugins.backgroundMode.enable();
+            
+            // Critical fix for Background Play
+            cordova.plugins.backgroundMode.on('activate', () => {
+                cordova.plugins.backgroundMode.disableWebViewOptimizations();
+            });
+
+            cordova.plugins.backgroundMode.setDefaults({
+                title: 'VoFo Music',
+                text: 'Your session is active',
+                icon: 'ic_launcher',
+                color: 'c5a367',
+                resume: true,
+                silent: false
+            });
+        }
+    }, false);
 
     function toggleExpand(e) {
         const playerBar = document.getElementById('playerBar');
@@ -231,24 +264,30 @@
     async function handleAuth() {
         const u = document.getElementById('lUser').value;
         const p = document.getElementById('lPass').value;
-        const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p})
-        });
-        const data = await res.json();
-        if(data.success) {
-            if(isLoginMode) {
-                currentUser = data;
-                document.getElementById('authScreen').classList.add('hidden');
-                document.getElementById('app').classList.remove('hidden');
-                fetchTrending();
-            } else { alert("Registry successful."); toggleAuth(); }
-        } else { alert("Access Denied"); }
+        try {
+            const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
+            if(data.success) {
+                if(isLoginMode) {
+                    currentUser = data;
+                    localStorage.setItem('vofo_user', JSON.stringify(data)); // Persistent Login
+                    document.getElementById('authScreen').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                    fetchTrending();
+                } else { alert("Registry successful."); toggleAuth(); }
+            } else { alert("Access Denied"); }
+        } catch (e) {
+            alert("Connection Error. Check your backend.");
+        }
     }
 
     function handleLogout() {
         currentUser = null;
+        localStorage.removeItem('vofo_user');
         if(player && player.stopVideo) player.stopVideo();
         document.getElementById('app').classList.add('hidden');
         document.getElementById('playerBar').classList.add('hidden');
@@ -258,7 +297,7 @@
 
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('yt-player', {
-            playerVars: { 'autoplay': 1, 'controls': 0 },
+            playerVars: { 'autoplay': 1, 'controls': 0, 'playsinline': 1 },
             events: {
                 'onStateChange': (e) => {
                     document.getElementById('playBtn').innerText = e.data === 1 ? "||" : "▶";
@@ -345,7 +384,6 @@
         return `${min}:${sec < 10 ? '0' : ''}${sec}`;
     }
 
-    // UPDATED LOGIC FOR STACK BEHAVIOR
     async function toggleLikeCurrent() {
         const song = currentPlaylist[currentIndex];
         const res = await fetch('/api/like', {
@@ -358,18 +396,13 @@
         });
         const data = await res.json();
         likeBtn.classList.toggle('liked', data.status === 'liked');
-        
-        // Refresh the library immediately so the new song pops to the top
         fetchLiked();
     }
 
-    // UPDATED LOGIC TO SORT NEWEST AT TOP
     async function fetchLiked() {
         if(!currentUser) return;
         const res = await fetch(`/api/liked/${currentUser.user_id}`);
         const data = await res.json();
-        
-        // Assuming API returns songs in order added, .reverse() puts newest on top
         const stackOrder = [...data].reverse(); 
         renderTracks(stackOrder, 'libraryResults');
     }
