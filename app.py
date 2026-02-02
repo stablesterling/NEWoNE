@@ -9,12 +9,13 @@ from passlib.context import CryptContext
 from ytmusicapi import YTMusic
 
 # --- DATABASE SETUP ---
-DB_URL = "postgresql://vofodb_user:Y7MQfAWwEtsiHQLiGHFV7ikOI2ruTv3u@dpg-d5lm4ongi27c7390kq40-a/vofodb"
+# Use psycopg instead of psycopg2 for Python 3.13 compatibility
+DB_URL = "postgresql+psycopg://vofodb_user:Y7MQfAWwEtsiHQLiGHFV7ikOI2ruTv3u@dpg-d5lm4ongi27c7390kq40-a/vofodb"
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# FIX: Use pbkdf2_sha256 instead of bcrypt to avoid password length limit
+# Use pbkdf2_sha256 instead of bcrypt to avoid password length limit
 pwd_context = CryptContext(
     schemes=["pbkdf2_sha256", "bcrypt"], 
     deprecated="auto"
@@ -46,8 +47,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # Dependency
 def get_db():
     db = SessionLocal()
-    try: yield db
-    finally: db.close()
+    try: 
+        yield db
+    finally: 
+        db.close()
 
 # --- AUTH ROUTES ---
 @app.post("/api/register")
@@ -69,14 +72,13 @@ async def register(data: dict, db: Session = Depends(get_db)):
         # Hash the password
         hashed_pwd = pwd_context.hash(password)
         
-        # Create user
-        user = User(username=username, password=hashed_pwd)
-        
         # Check if username already exists
         existing_user = db.query(User).filter(User.username == username).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="Username already exists")
         
+        # Create user
+        user = User(username=username, password=hashed_pwd)
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -176,12 +178,15 @@ async def trending():
     try:
         charts = yt.get_charts(country="IN")
         songs = charts.get('songs', {}).get('items', [])
-        return [{
-            "id": s.get('videoId', ''),
-            "title": s.get('title', 'Unknown'),
-            "artist": s.get('artists', [{}])[0].get('name', 'Unknown'),
-            "thumbnail": s.get('thumbnails', [{}])[-1].get('url', '')
-        } for s in songs[:15]]
+        result = []
+        for s in songs[:15]:
+            result.append({
+                "id": s.get('videoId', ''),
+                "title": s.get('title', 'Unknown'),
+                "artist": s.get('artists', [{}])[0].get('name', 'Unknown') if s.get('artists') else 'Unknown',
+                "thumbnail": s.get('thumbnails', [{}])[-1].get('url', '') if s.get('thumbnails') else ''
+            })
+        return result
     except Exception as e:
         print(f"Error fetching trending: {e}")
         return []
@@ -193,12 +198,16 @@ async def search(q: str):
             return []
         
         results = yt.search(q.strip(), filter="songs")
-        return [{
-            "id": r.get('videoId', ''),
-            "title": r.get('title', 'Unknown'),
-            "artist": r.get('artists', [{}])[0].get('name', 'Unknown'),
-            "thumbnail": r.get('thumbnails', [{}])[-1].get('url', '')
-        } for r in results if r.get('videoId')]
+        result = []
+        for r in results:
+            if r.get('videoId'):
+                result.append({
+                    "id": r.get('videoId', ''),
+                    "title": r.get('title', 'Unknown'),
+                    "artist": r.get('artists', [{}])[0].get('name', 'Unknown') if r.get('artists') else 'Unknown',
+                    "thumbnail": r.get('thumbnails', [{}])[-1].get('url', '') if r.get('thumbnails') else ''
+                })
+        return result
     except Exception as e:
         print(f"Error searching: {e}")
         return []
@@ -209,7 +218,7 @@ def home():
         with open("index.html", "r", encoding="utf-8") as f: 
             return f.read()
     except FileNotFoundError:
-        return HTMLResponse("<h1>Music App</h1><p>index.html not found</p>")
+        return HTMLResponse("<h1>VoFo Music</h1><p>Frontend not found</p>")
 
 # Health check endpoint
 @app.get("/health")
