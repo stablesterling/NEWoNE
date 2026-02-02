@@ -16,8 +16,12 @@
         .auth-card { background: #111; padding: 30px; border-radius: 8px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; }
         .auth-card h2 { font-family: var(--serif); color: var(--gold); margin-bottom: 25px; letter-spacing: 5px; }
         .auth-card input { width: 100%; padding: 14px; margin-bottom: 12px; background: #000; border: 1px solid #333; color: white; border-radius: 4px; outline: none; }
-        .auth-btn { width: 100%; padding: 14px; background: var(--gold); border: none; font-weight: 600; cursor: pointer; border-radius: 4px; margin-top: 10px; }
-
+        .auth-btn { width: 100%; padding: 14px; background: var(--gold); border: none; font-weight: 600; cursor: pointer; border-radius: 4px; margin-top: 10px; color: black; }
+        .auth-btn:active { opacity: 0.8; }
+        
+        /* ERROR MESSAGE */
+        .error-message { color: #ff4b2b; font-size: 12px; margin-top: 5px; text-align: left; display: none; }
+        
         /* NAV & TABS */
         nav { display: flex; justify-content: center; padding: 15px; border-bottom: 1px solid #1a1a1a; background: var(--bg); position: sticky; top: 0; z-index: 100; }
         .tabs { display: flex; justify-content: center; gap: 30px; margin: 20px 0; }
@@ -30,6 +34,10 @@
         .search-box input { flex: 1; padding: 14px; background: #111; border: 1px solid #222; color: white; outline: none; border-radius: 4px; }
         .container { width: 100%; max-width: 800px; margin: auto; padding-bottom: 140px; }
         .section-title { font-family: var(--serif); color: var(--gold); font-size: 18px; margin: 15px 0; border-bottom: 1px solid #1a1a1a; padding-bottom: 5px; }
+        
+        /* LOADING SPINNER */
+        .spinner { border: 3px solid #333; border-top: 3px solid var(--gold); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .track { padding: 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #111; cursor: pointer; }
         .track:active { background: #1a1a1a; }
@@ -47,9 +55,13 @@
         .controls { display: flex; align-items: center; gap: 15px; }
         .like-icon { font-size: 20px; cursor: pointer; color: var(--muted); transition: 0.3s; }
         .like-icon.liked { color: #ff4b2b; }
-        .play-btn { background: var(--gold); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+        .play-btn { background: var(--gold); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; color: black; }
         #progress-bar { width: 100%; height: 3px; background: #222; position: absolute; top: 0; left: 0; cursor: pointer; }
         #progress-inner { height: 100%; background: var(--gold); width: 0%; }
+        
+        /* EMPTY STATE */
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+        .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -57,9 +69,10 @@
 <div id="authOverlay" class="auth-overlay">
     <div class="auth-card">
         <h2 id="authTitle">VOFO</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button class="auth-btn" onclick="handleAuth()">CONTINUE</button>
+        <input type="text" id="username" placeholder="Username" autocomplete="username">
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+        <div id="authError" class="error-message"></div>
+        <button class="auth-btn" onclick="handleAuth()" id="authButton">CONTINUE</button>
         <p id="authSwitch" style="font-size: 11px; margin-top: 20px; color: var(--muted); cursor: pointer;" onclick="toggleAuthMode()">New here? Create account</p>
     </div>
 </div>
@@ -80,13 +93,23 @@
             </div>
             <div class="container">
                 <div id="statusHeader" class="section-title">Trending</div>
+                <div id="loading" class="hidden"><div class="spinner"></div></div>
                 <div id="results"></div>
+                <div id="emptyState" class="empty-state hidden">
+                    <div class="icon">🎵</div>
+                    <p>No songs found</p>
+                </div>
             </div>
         </div>
 
         <div id="libraryView" class="container hidden">
             <div class="section-title">Liked Songs</div>
+            <div id="loadingLiked" class="hidden"><div class="spinner"></div></div>
             <div id="likedResults"></div>
+            <div id="emptyLiked" class="empty-state hidden">
+                <div class="icon">❤️</div>
+                <p>No liked songs yet</p>
+            </div>
         </div>
     </div>
 </div>
@@ -94,7 +117,7 @@
 <div class="player hidden" id="playerBar">
     <div id="progress-bar" onclick="seek(event)"><div id="progress-inner"></div></div>
     <div id="yt-player"></div>
-    <img id="pThumb" class="p-thumb" src="">
+    <img id="pThumb" class="p-thumb" src="" alt="Album cover">
     <div class="player-info">
         <div id="pTitle">...</div>
         <div id="pArtist" style="font-size: 10px; color: var(--muted);">...</div>
@@ -109,37 +132,84 @@
 <script>
     let player, currentUser = null, isLoginMode = true;
     let currentPlaylist = [], currentIndex = -1;
+    let isPlaying = false;
 
     // --- AUTH LOGIC ---
     function toggleAuthMode() {
         isLoginMode = !isLoginMode;
         document.getElementById('authTitle').innerText = isLoginMode ? "VOFO" : "REGISTER";
         document.getElementById('authSwitch').innerText = isLoginMode ? "New here? Create account" : "Have an account? Login";
+        document.getElementById('authError').style.display = 'none';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
     }
 
     async function handleAuth() {
-        const u = document.getElementById('username').value;
+        const u = document.getElementById('username').value.trim();
         const p = document.getElementById('password').value;
-        if(!u || !p) return alert("Fill all fields");
+        const errorDiv = document.getElementById('authError');
+        const authBtn = document.getElementById('authButton');
+        
+        // Clear previous errors
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+        
+        // Validate inputs
+        if(!u || !p) {
+            showAuthError("Please fill in all fields");
+            return;
+        }
+        
+        if(u.length < 3) {
+            showAuthError("Username must be at least 3 characters");
+            return;
+        }
+        
+        if(p.length < 6) {
+            showAuthError("Password must be at least 6 characters");
+            return;
+        }
+        
+        // Disable button during request
+        authBtn.disabled = true;
+        authBtn.textContent = 'PLEASE WAIT...';
+        
+        try {
+            const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
 
-        const res = await fetch(isLoginMode ? '/api/login' : '/api/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username: u, password: p})
-        });
-
-        const data = await res.json();
-        if(data.success) {
-            if(isLoginMode) {
-                currentUser = data;
-                document.getElementById('authOverlay').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                fetchTrending();
+            const data = await res.json();
+            
+            if(res.ok && data.success) {
+                if(isLoginMode) {
+                    currentUser = data;
+                    document.getElementById('authOverlay').classList.add('hidden');
+                    document.getElementById('mainApp').classList.remove('hidden');
+                    fetchTrending();
+                } else {
+                    // Registration successful, switch to login mode
+                    alert("Account created successfully! Please login.");
+                    toggleAuthMode();
+                }
             } else {
-                alert("Account created! Now login.");
-                toggleAuthMode();
+                showAuthError(data.detail || "Authentication failed");
             }
-        } else { alert("Error: " + (data.detail || "Failed")); }
+        } catch (error) {
+            showAuthError("Network error. Please try again.");
+        } finally {
+            // Re-enable button
+            authBtn.disabled = false;
+            authBtn.textContent = 'CONTINUE';
+        }
+    }
+
+    function showAuthError(message) {
+        const errorDiv = document.getElementById('authError');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
     }
 
     // --- TAB LOGIC ---
@@ -148,42 +218,102 @@
         document.getElementById('libraryView').classList.toggle('hidden', mode === 'explore');
         document.getElementById('tabExp').classList.toggle('active', mode === 'explore');
         document.getElementById('tabLib').classList.toggle('active', mode === 'library');
-        if(mode === 'library') fetchLiked();
+        
+        if(mode === 'library' && currentUser) {
+            fetchLiked();
+        }
     }
 
     // --- MUSIC LOGIC ---
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('yt-player', {
+            height: '0',
+            width: '0',
+            playerVars: {
+                'autoplay': 0,
+                'controls': 0,
+                'disablekb': 1,
+                'fs': 0,
+                'modestbranding': 1,
+                'rel': 0,
+                'showinfo': 0
+            },
             events: { 
-                'onStateChange': (e) => {
-                    document.getElementById('playBtn').innerText = e.data === 1 ? "||" : "▶";
-                    if(e.data === 0) skipNext();
-                }
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
             }
         });
         setInterval(updateProgress, 1000);
     }
+    
+    function onPlayerReady(event) {
+        console.log("YouTube player ready");
+    }
+    
+    function onPlayerStateChange(event) {
+        const playBtn = document.getElementById('playBtn');
+        if (event.data === YT.PlayerState.PLAYING) {
+            playBtn.textContent = "||";
+            isPlaying = true;
+        } else if (event.data === YT.PlayerState.PAUSED) {
+            playBtn.textContent = "▶";
+            isPlaying = false;
+        } else if (event.data === YT.PlayerState.ENDED) {
+            skipNext();
+        }
+    }
 
     async function fetchTrending() {
-        const res = await fetch('/api/trending');
-        const data = await res.json();
-        renderTracks(data, 'results');
+        showLoading('loading');
+        try {
+            const res = await fetch('/api/trending');
+            const data = await res.json();
+            renderTracks(data, 'results');
+            hideLoading('loading');
+        } catch (error) {
+            console.error("Error fetching trending:", error);
+            hideLoading('loading');
+            showEmptyState('emptyState');
+        }
     }
 
     async function doSearch() {
-        const q = document.getElementById('searchInput').value;
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        document.getElementById('statusHeader').innerText = "Search Results";
-        renderTracks(data, 'results');
+        const q = document.getElementById('searchInput').value.trim();
+        if(!q) return;
+        
+        showLoading('loading');
+        try {
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            document.getElementById('statusHeader').innerText = "Search Results";
+            renderTracks(data, 'results');
+            hideLoading('loading');
+        } catch (error) {
+            console.error("Error searching:", error);
+            hideLoading('loading');
+            showEmptyState('emptyState');
+        }
     }
 
     function renderTracks(tracks, targetId) {
         const list = document.getElementById(targetId);
+        const emptyDiv = targetId === 'results' ? 'emptyState' : 'emptyLiked';
+        
+        if (!tracks || tracks.length === 0) {
+            list.innerHTML = '';
+            showEmptyState(emptyDiv);
+            return;
+        }
+        
+        hideEmptyState(emptyDiv);
+        
         list.innerHTML = tracks.map((s, i) => `
             <div class="track" onclick="startPlaylist(${i}, ${JSON.stringify(tracks).replace(/"/g, '&quot;')})">
-                <img src="${s.thumbnail}">
-                <div class="track-meta"><div>${s.title}</div><div>${s.artist}</div></div>
+                <img src="${s.thumbnail || ''}" alt="${s.title}">
+                <div class="track-meta">
+                    <div>${s.title || 'Unknown'}</div>
+                    <div>${s.artist || 'Unknown'}</div>
+                </div>
             </div>
         `).join('');
     }
@@ -194,33 +324,51 @@
     }
 
     function playSong(index) {
+        if (!currentPlaylist || currentPlaylist.length === 0) return;
+        
         currentIndex = index;
         const song = currentPlaylist[index];
+        
         document.getElementById('playerBar').classList.remove('hidden');
-        document.getElementById('pTitle').innerText = song.title;
-        document.getElementById('pArtist').innerText = song.artist;
-        document.getElementById('pThumb').src = song.thumbnail;
-        player.loadVideoById(song.id);
+        document.getElementById('pTitle').innerText = song.title || 'Unknown';
+        document.getElementById('pArtist').innerText = song.artist || 'Unknown';
+        document.getElementById('pThumb').src = song.thumbnail || '';
+        document.getElementById('pThumb').alt = song.title || 'Album cover';
+        
+        if (player && player.loadVideoById) {
+            player.loadVideoById(song.id);
+        }
+        
         checkIfLiked(song.id);
     }
 
     function togglePlay() {
-        const state = player.getPlayerState();
-        state === 1 ? player.pauseVideo() : player.playVideo();
+        if (!player) return;
+        
+        if (isPlaying) {
+            player.pauseVideo();
+        } else {
+            player.playVideo();
+        }
     }
 
     function skipNext() {
-        if(currentIndex < currentPlaylist.length - 1) playSong(currentIndex + 1);
+        if (currentPlaylist && currentIndex < currentPlaylist.length - 1) {
+            playSong(currentIndex + 1);
+        }
     }
 
     function seek(e) {
+        if (!player || !player.getDuration) return;
+        
         const bar = document.getElementById('progress-bar');
-        const pct = e.offsetX / bar.offsetWidth;
+        const rect = bar.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / bar.offsetWidth;
         player.seekTo(pct * player.getDuration());
     }
 
     function updateProgress() {
-        if(player && player.getDuration && player.getDuration() > 0) {
+        if (player && player.getDuration && player.getDuration() > 0) {
             const pct = (player.getCurrentTime() / player.getDuration()) * 100;
             document.getElementById('progress-inner').style.width = pct + "%";
         }
@@ -228,33 +376,83 @@
 
     // --- LIKED SONGS LOGIC ---
     async function toggleLikeCurrent() {
+        if (!currentUser || !currentPlaylist || currentIndex < 0) return;
+        
         const song = currentPlaylist[currentIndex];
-        const res = await fetch('/api/like', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: currentUser.user_id,
-                song_id: song.id,
-                title: song.title,
-                artist: song.artist,
-                thumbnail: song.thumbnail
-            })
-        });
-        const data = await res.json();
-        document.getElementById('likeBtn').classList.toggle('liked', data.status === 'liked');
+        if (!song) return;
+        
+        try {
+            const res = await fetch('/api/like', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: currentUser.user_id,
+                    song_id: song.id,
+                    title: song.title,
+                    artist: song.artist,
+                    thumbnail: song.thumbnail
+                })
+            });
+            
+            const data = await res.json();
+            if (res.ok) {
+                const likeBtn = document.getElementById('likeBtn');
+                likeBtn.classList.toggle('liked', data.status === 'liked');
+                
+                // Refresh liked songs if in library view
+                if (!document.getElementById('libraryView').classList.contains('hidden')) {
+                    fetchLiked();
+                }
+            }
+        } catch (error) {
+            console.error("Error toggling like:", error);
+        }
     }
 
     async function fetchLiked() {
-        const res = await fetch(`/api/liked/${currentUser.user_id}`);
-        const data = await res.json();
-        renderTracks(data, 'likedResults');
+        if (!currentUser) return;
+        
+        showLoading('loadingLiked');
+        try {
+            const res = await fetch(`/api/liked/${currentUser.user_id}`);
+            const data = await res.json();
+            renderTracks(data, 'likedResults');
+            hideLoading('loadingLiked');
+        } catch (error) {
+            console.error("Error fetching liked songs:", error);
+            hideLoading('loadingLiked');
+            showEmptyState('emptyLiked');
+        }
     }
 
     async function checkIfLiked(id) {
-        const res = await fetch(`/api/liked/${currentUser.user_id}`);
-        const data = await res.json();
-        const isLiked = data.some(s => s.id === id);
-        document.getElementById('likeBtn').classList.toggle('liked', isLiked);
+        if (!currentUser || !id) return;
+        
+        try {
+            const res = await fetch(`/api/liked/${currentUser.user_id}`);
+            const data = await res.json();
+            const isLiked = data.some(s => s.id === id);
+            document.getElementById('likeBtn').classList.toggle('liked', isLiked);
+        } catch (error) {
+            console.error("Error checking liked status:", error);
+        }
+    }
+
+    // --- UTILITY FUNCTIONS ---
+    function showLoading(elementId) {
+        document.getElementById(elementId).classList.remove('hidden');
+    }
+    
+    function hideLoading(elementId) {
+        document.getElementById(elementId).classList.add('hidden');
+    }
+    
+    function showEmptyState(elementId) {
+        document.getElementById(elementId).classList.remove('hidden');
+    }
+    
+    function hideEmptyState(elementId) {
+        document.getElementById(elementId).classList.add('hidden');
     }
 </script>
 </body>
