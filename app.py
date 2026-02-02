@@ -8,20 +8,16 @@ from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from ytmusicapi import YTMusic
 
-# --- DATABASE SETUP ---
-# Use psycopg instead of psycopg2 for Python 3.13 compatibility
-DB_URL = "postgresql+psycopg://vofodb_user:Y7MQfAWwEtsiHQLiGHFV7ikOI2ruTv3u@dpg-d5lm4ongi27c7390kq40-a/vofodb"
+# Database setup
+DB_URL = "postgresql://vofodb_user:Y7MQfAWwEtsiHQLiGHFV7ikOI2ruTv3u@dpg-d5lm4ongi27c7390kq40-a/vofodb"
 engine = create_engine(DB_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Use pbkdf2_sha256 instead of bcrypt to avoid password length limit
-pwd_context = CryptContext(
-    schemes=["pbkdf2_sha256", "bcrypt"], 
-    deprecated="auto"
-)
+# Use a different hashing scheme
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
-# --- MODELS ---
+# Models
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -44,7 +40,6 @@ yt = YTMusic()
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# Dependency
 def get_db():
     db = SessionLocal()
     try: 
@@ -52,178 +47,86 @@ def get_db():
     finally: 
         db.close()
 
-# --- AUTH ROUTES ---
 @app.post("/api/register")
-async def register(data: dict, db: Session = Depends(get_db)):
-    try:
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
-        
-        # Validate inputs
-        if not username or not password:
-            raise HTTPException(status_code=400, detail="Username and password are required")
-        
-        if len(username) < 3:
-            raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
-        
-        if len(password) < 6:
-            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-        
-        # Hash the password
-        hashed_pwd = pwd_context.hash(password)
-        
-        # Check if username already exists
-        existing_user = db.query(User).filter(User.username == username).first()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Username already exists")
-        
-        # Create user
-        user = User(username=username, password=hashed_pwd)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        
-        return {
-            "success": True, 
-            "message": "Account created successfully",
-            "user_id": user.id,
-            "username": user.username
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+def register(data: dict, db: Session = Depends(get_db)):
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    if not username or not password:
+        raise HTTPException(400, "Need username and password")
+    
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        raise HTTPException(400, "Username taken")
+    
+    hashed = pwd_context.hash(password)
+    user = User(username=username, password=hashed)
+    db.add(user)
+    db.commit()
+    return {"success": True, "user_id": user.id, "username": user.username}
 
 @app.post("/api/login")
-async def login(data: dict, db: Session = Depends(get_db)):
-    try:
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
-        
-        if not username or not password:
-            raise HTTPException(status_code=400, detail="Username and password are required")
-        
-        # Find user
-        user = db.query(User).filter(User.username == username).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        # Verify password
-        if not pwd_context.verify(password, user.password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        return {
-            "success": True, 
-            "user_id": user.id, 
-            "username": user.username
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
+def login(data: dict, db: Session = Depends(get_db)):
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not pwd_context.verify(password, user.password):
+        raise HTTPException(401, "Bad login")
+    
+    return {"success": True, "user_id": user.id, "username": user.username}
 
-# --- LIKES ROUTES ---
 @app.post("/api/like")
-async def toggle_like(data: dict, db: Session = Depends(get_db)):
-    try:
-        user_id = data.get('user_id')
-        song_id = data.get('song_id')
-        
-        if not user_id or not song_id:
-            raise HTTPException(status_code=400, detail="Missing required fields")
-        
-        # Check if song already liked
-        existing = db.query(LikedSong).filter(
-            LikedSong.user_id == user_id, 
-            LikedSong.song_id == song_id
-        ).first()
-        
-        if existing:
-            db.delete(existing)
-            db.commit()
-            return {"status": "unliked"}
-        
-        # Add new like
-        new_like = LikedSong(
-            user_id=user_id, 
-            song_id=song_id, 
-            title=data.get('title', ''), 
-            artist=data.get('artist', ''), 
-            thumbnail=data.get('thumbnail', '')
-        )
-        db.add(new_like)
+def toggle_like(data: dict, db: Session = Depends(get_db)):
+    existing = db.query(LikedSong).filter(
+        LikedSong.user_id == data['user_id'], 
+        LikedSong.song_id == data['song_id']
+    ).first()
+    
+    if existing:
+        db.delete(existing)
         db.commit()
-        return {"status": "liked"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to toggle like: {str(e)}")
+        return {"status": "unliked"}
+    
+    new_like = LikedSong(
+        user_id=data['user_id'], 
+        song_id=data['song_id'], 
+        title=data['title'], 
+        artist=data['artist'], 
+        thumbnail=data['thumbnail']
+    )
+    db.add(new_like)
+    db.commit()
+    return {"status": "liked"}
 
 @app.get("/api/liked/{user_id}")
-async def get_liked(user_id: int, db: Session = Depends(get_db)):
-    try:
-        likes = db.query(LikedSong).filter(LikedSong.user_id == user_id).all()
-        return [{
-            "id": l.song_id, 
-            "title": l.title, 
-            "artist": l.artist, 
-            "thumbnail": l.thumbnail
-        } for l in likes]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch liked songs: {str(e)}")
+def get_liked(user_id: int, db: Session = Depends(get_db)):
+    likes = db.query(LikedSong).filter(LikedSong.user_id == user_id).all()
+    return [{"id": l.song_id, "title": l.title, "artist": l.artist, "thumbnail": l.thumbnail} for l in likes]
 
-# --- MUSIC ROUTES ---
 @app.get("/api/trending")
-async def trending():
+def trending():
     try:
-        charts = yt.get_charts(country="IN")
-        songs = charts.get('songs', {}).get('items', [])
-        result = []
-        for s in songs[:15]:
-            result.append({
-                "id": s.get('videoId', ''),
-                "title": s.get('title', 'Unknown'),
-                "artist": s.get('artists', [{}])[0].get('name', 'Unknown') if s.get('artists') else 'Unknown',
-                "thumbnail": s.get('thumbnails', [{}])[-1].get('url', '') if s.get('thumbnails') else ''
-            })
-        return result
-    except Exception as e:
-        print(f"Error fetching trending: {e}")
+        songs = yt.get_charts(country="IN")['songs']['items']
+        return [{"id": s['videoId'], "title": s['title'], "artist": s['artists'][0]['name'], "thumbnail": s['thumbnails'][-1]['url']} for s in songs[:15]]
+    except: 
         return []
 
 @app.get("/api/search")
-async def search(q: str):
+def search(q: str):
     try:
-        if not q or len(q.strip()) < 1:
-            return []
-        
-        results = yt.search(q.strip(), filter="songs")
-        result = []
-        for r in results:
-            if r.get('videoId'):
-                result.append({
-                    "id": r.get('videoId', ''),
-                    "title": r.get('title', 'Unknown'),
-                    "artist": r.get('artists', [{}])[0].get('name', 'Unknown') if r.get('artists') else 'Unknown',
-                    "thumbnail": r.get('thumbnails', [{}])[-1].get('url', '') if r.get('thumbnails') else ''
-                })
-        return result
-    except Exception as e:
-        print(f"Error searching: {e}")
+        results = yt.search(q, filter="songs")
+        return [{"id": r['videoId'], "title": r['title'], "artist": r['artists'][0]['name'], "thumbnail": r['thumbnails'][-1]['url']} for r in results]
+    except: 
         return []
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def home():
     try:
         with open("index.html", "r", encoding="utf-8") as f: 
-            return f.read()
-    except FileNotFoundError:
-        return HTMLResponse("<h1>VoFo Music</h1><p>Frontend not found</p>")
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "service": "vofo-music-api"}
+            return HTMLResponse(f.read())
+    except:
+        return HTMLResponse("<h1>NEWoNE Music</h1><p>Frontend loading...</p>")
 
 if __name__ == "__main__":
     import uvicorn
