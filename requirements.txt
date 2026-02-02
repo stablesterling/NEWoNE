@@ -1,8 +1,10 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
+sqlalchemy==2.0.27
+psycopg==3.1.18
 ytmusicapi==1.8.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 python-multipart==0.0.6
+greenlet==3.0.3
+typing-extensions==4.11.0
